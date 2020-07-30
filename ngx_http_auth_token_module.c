@@ -19,30 +19,29 @@ ngx_module_t ngx_http_auth_token_module;
 static ngx_int_t
 ngx_http_auth_token_handler(ngx_http_request_t *r)
 {
-
+  /* avoid re-entry */
   if (r->main->internal) {
     return NGX_DECLINED;
   }
 
   r->main->internal = 1;
 
+  /* set up the variables we are going to need */
   ngx_str_t cookie = (ngx_str_t)ngx_string("auth_token");
-  ngx_int_t location;
   ngx_str_t cookie_value;
-  location = ngx_http_parse_multi_header_lines(&r->headers_in.cookies, &cookie, &cookie_value);
+  ngx_int_t location = ngx_http_parse_multi_header_lines(&r->headers_in.cookies, &cookie, &cookie_value);
+
+  /* This is the same no matter which branch we go through */
+  ngx_table_elt_t *h;
+  h = ngx_list_push(&r->headers_out.headers);
+  h->hash = 1;
 
   if (location == NGX_DECLINED) {
-    ngx_table_elt_t *h;
-    h = ngx_list_push(&r->headers_out.headers);
-    h->hash = 1;
     ngx_str_set(&h->key, "location");
     ngx_str_set(&h->value, "http://google.com");
     return NGX_HTTP_MOVED_TEMPORARILY;
 
   } else {
-    ngx_table_elt_t *h;
-    h = ngx_list_push(&r->headers_out.headers);
-    h->hash = 1;
     ngx_str_set(&h->key, "X-Auth-Token");
     h->value = cookie_value;
 
