@@ -26,13 +26,28 @@ ngx_http_auth_token_handler(ngx_http_request_t *r)
 
   r->main->internal = 1;
 
-  ngx_table_elt_t *h;
-  h = ngx_list_push(&r->headers_out.headers);
-  h->hash = 1;
-  ngx_str_set(&h->key, "X-NGINX-Tutorial");
-  ngx_str_set(&h->value, "Hello World!");
+  ngx_str_t cookie = (ngx_str_t)ngx_string("auth_token");
+  ngx_int_t location;
+  ngx_str_t cookie_value;
+  location = ngx_http_parse_multi_header_lines(&r->headers_in.cookies, &cookie, &cookie_value);
 
-  /*return NGX_OK;*/
+  if (location == NGX_DECLINED) {
+    ngx_table_elt_t *h;
+    h = ngx_list_push(&r->headers_out.headers);
+    h->hash = 1;
+    ngx_str_set(&h->key, "location");
+    ngx_str_set(&h->value, "http://google.com");
+    return NGX_HTTP_MOVED_TEMPORARILY;
+
+  } else {
+    ngx_table_elt_t *h;
+    h = ngx_list_push(&r->headers_out.headers);
+    h->hash = 1;
+    ngx_str_set(&h->key, "X-Auth-Token");
+    h->value = cookie_value;
+
+  }
+
   return NGX_DECLINED;
 }
 
