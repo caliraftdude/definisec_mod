@@ -6,11 +6,6 @@
 #include <string.h>
 #include "hiredis/hiredis.h"
 
-/* Forward declarations */
-ngx_module_t ngx_http_auth_token_module;
-static ngx_int_t lookup_user(auth_token_main_conf_t *conf, ngx_str_t *auth_token, ngx_str_t *user_id);
-static ngx_int_t redirect(ngx_http_request_t *r, ngx_str_t *location);
-static void append_user_id(ngx_http_request_t *r, ngx_str_t *user_id);
 
 /* auth_token_main_conf
  * a structure to hold all of the configuration options in one place
@@ -62,6 +57,14 @@ static ngx_command_t ngx_http_auth_token_commands[] = {
 
   ngx_null_command
 };
+
+
+/* Forward declarations */
+ngx_module_t ngx_http_auth_token_module;
+static ngx_int_t lookup_user(auth_token_main_conf_t *conf, ngx_str_t *auth_token, ngx_str_t *user_id);
+static ngx_int_t redirect(ngx_http_request_t *r, ngx_str_t *location);
+static void append_user_id(ngx_http_request_t *r, ngx_str_t *user_id);
+
 
 /*
  * ngx_auth_token_handler()
