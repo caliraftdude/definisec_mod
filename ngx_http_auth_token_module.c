@@ -12,6 +12,56 @@ static ngx_int_t lookup_user(ngx_str_t *auth_token, ngx_str_t *user_id);
 static ngx_int_t redirect(ngx_http_request_t *r, ngx_str_t *location);
 static void append_user_id(ngx_http_request_t *r, ngx_str_t *user_id);
 
+/* auth_token_main_conf
+ * a structure to hold all of the configuration options in one place
+ */
+typedef struct {
+  ngx_str_t   redis_host;
+  ngx_int_t   redis_port;
+  ngx_str_t   cookie_name;
+  ngx_str_t   redirect_location;
+} auth_token_main_conf_t;
+
+/* ngx_http_auth_token_commands
+ * Static array that holds the directives and their configuration so the nginx engine knows how to store,
+ * parse and locate them.
+ */
+static ngx_command_t ngx_http_auth_token_commands[] = {
+  {
+    ngx_string("auth_token_redis_host"),
+    NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+    ngx_conf_set_str_slot,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(auth_token_main_conf_t, redis_host),
+    NULL
+  },
+  {
+    ngx_string("auth_token_redis_port"),
+    NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+    ngx_conf_set_num_slot,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(auth_token_main_conf_t, redis_port),
+    NULL
+  },
+  {
+    ngx_string("auth_token_cookie_name"),
+    NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+    ngx_conf_set_str_slot,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(auth_token_main_conf_t, cookie_name),
+    NULL
+  },
+  {
+    ngx_string("auth_token_redirect_location"),
+    NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+    ngx_conf_set_str_slot,
+    NGX_HTTP_MAIN_CONF_OFFSET,
+    offsetof(auth_token_main_conf_t, redirect_location),
+    NULL
+  },
+
+  ngx_null_command
+};
 
 /*
  * ngx_auth_token_handler()
