@@ -96,12 +96,10 @@ lookup_user(ngx_str_t *auth_token, ngx_str_t *user_id)
 
   if (reply->type == REDIS_REPLY_NIL ) {
     return NGX_DECLINED;
-
-  } else {
-    ngx_str_set(user_id, reply->str);
-    return NGX_OK;
-
   }
+    
+  ngx_str_set(user_id, reply->str);
+  return NGX_OK;
 
 }
 
