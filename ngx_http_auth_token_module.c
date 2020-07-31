@@ -3,7 +3,15 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#include <string.h>
+#include "hiredis/hiredis.h"
+
+/* Forward declarations */
 ngx_module_t ngx_http_auth_token_module;
+static ngx_int_t lookup_user(ngx_str_t *auth_token, ngx_str_t *user_id);
+static ngx_int_t redirect(ngx_http_request_t *r, ngx_str_t *location);
+static void append_user_id(ngx_http_request_t *r, ngx_str_t *user_id);
+
 
 /*
  * ngx_auth_token_handler()
@@ -27,27 +35,25 @@ ngx_http_auth_token_handler(ngx_http_request_t *r)
   r->main->internal = 1;
 
   /* set up the variables we are going to need */
+  ngx_str_t location = (ngx_str_t)ngx_string("http://google.com");
   ngx_str_t cookie = (ngx_str_t)ngx_string("auth_token");
-  ngx_str_t cookie_value;
-  ngx_int_t location = ngx_http_parse_multi_header_lines(&r->headers_in.cookies, &cookie, &cookie_value);
+  ngx_str_t auth_token;
+  ngx_int_t lookup = ngx_http_parse_multi_header_lines(&r->headers_in.cookies, &cookie, &auth_token);
 
-  /* This is the same no matter which branch we go through */
-  ngx_table_elt_t *h;
-  h = ngx_list_push(&r->headers_out.headers);
-  h->hash = 1;
-
-  if (location == NGX_DECLINED) {
-    ngx_str_set(&h->key, "location");
-    ngx_str_set(&h->value, "http://google.com");
-    return NGX_HTTP_MOVED_TEMPORARILY;
-
-  } else {
-    ngx_str_set(&h->key, "X-Auth-Token");
-    h->value = cookie_value;
-
+  if (lookup == NGX_DECLINED) {
+    return redirect(r, &location);
   }
 
+  ngx_str_t user_id;
+  ngx_int_t lookup_result = lookup_user(&auth_token, &user_id);
+
+  if (lookup_result == NGX_DECLINED) {
+    return redirect(r, &location);
+  }
+
+  append_user_id(r, &user_id);
   return NGX_DECLINED;
+
 }
 
 /*
@@ -76,6 +82,59 @@ ngx_http_auth_token_init(ngx_conf_t *cf)
   return NGX_OK;
 }
 
+/*
+ * lookup_user
+ * This function accepts an auth toekn value and a vairalbe to hold the user_id if it is found.
+ * A connection is made to redis and passed in the redisCommand.  If it succeeds, a string will
+ * be returned.  If it fails, the return object will be of type REDIS_REPLY_NIL.
+ */
+static ngx_int_t
+lookup_user(ngx_str_t *auth_token, ngx_str_t *user_id)
+{
+  redisContext *context = redisConnect("localhost", 6379);
+  redisReply *reply = redisCommand(context, "GET %s", auth_token->data);
+
+  if (reply->type == REDIS_REPLY_NIL ) {
+    return NGX_DECLINED;
+
+  } else {
+    ngx_str_set(user_id, reply->str);
+    return NGX_OK;
+
+  }
+
+}
+
+/*
+ * redirect
+ * Simple function to set up a redirect
+ */
+static ngx_int_t
+redirect(ngx_http_request_t *r, ngx_str_t *location)
+{
+  ngx_table_elt_t *h;
+  h = ngx_list_push(&r->headers_out.headers);
+  h->hash = 1;
+  ngx_str_set(&h->key, "location");
+  h->value = *location;
+
+  return NGX_HTTP_MOVED_TEMPORARILY;
+
+}
+
+/*
+ * append_user_id
+ * Append_user_id takes a user id and appends it as ahte value in a new header 'X-User-Id'
+ */
+static void
+append_user_id(ngx_http_request_t *r, ngx_str_t *user_id)
+{
+  ngx_table_elt_t *h;
+  h = ngx_list_push(&r->headers_out.headers);
+  h->hash = 1;
+  ngx_str_set(&h->key, "X-User-Id");
+  h->value = *user_id;
+}
 
 /*
  * ngx_http_auth_token_module_ctx

@@ -5,10 +5,12 @@ if test -n "$ngx_module_link"; then
     ngx_module_type=HTTP
     ngx_module_name=ngx_http_auth_token_module
     ngx_module_srcs="$ngx_addon_dir/ngx_http_auth_token_module.c"
+    ngx_module_libs="$CORE_LIBS -lhiredis"
 
    . auto/module
 else
     # Old way
+    CORE_LIBS="$CORE_LIBS -lhiredis"
     HTTP_MODULES="$HTTP_MODULES ngx_http_auth_token_module"
     NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_auth_token_module.c"
 fi
