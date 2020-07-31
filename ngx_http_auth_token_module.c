@@ -8,7 +8,7 @@
 
 /* Forward declarations */
 ngx_module_t ngx_http_auth_token_module;
-static ngx_int_t lookup_user(ngx_str_t *auth_token, ngx_str_t *user_id);
+static ngx_int_t lookup_user(auth_token_main_conf_t *conf, ngx_str_t *auth_token, ngx_str_t *user_id);
 static ngx_int_t redirect(ngx_http_request_t *r, ngx_str_t *location);
 static void append_user_id(ngx_http_request_t *r, ngx_str_t *user_id);
 
@@ -85,20 +85,20 @@ ngx_http_auth_token_handler(ngx_http_request_t *r)
   r->main->internal = 1;
 
   /* set up the variables we are going to need */
-  ngx_str_t location = (ngx_str_t)ngx_string("http://google.com");
-  ngx_str_t cookie = (ngx_str_t)ngx_string("auth_token");
-  ngx_str_t auth_token;
-  ngx_int_t lookup = ngx_http_parse_multi_header_lines(&r->headers_in.cookies, &cookie, &auth_token);
+  auth_token_main_conf_t * conf = ngx_http_get_module_main_conf(r, ngx_http_auth_token_module);
 
-  if (lookup == NGX_DECLINED) {
-    return redirect(r, &location);
+  ngx_str_t auth_token;
+  ngx_int_t cookie_location = ngx_http_parse_multi_header_lines(&r->headers_in.cookies, &conf->cookie_name, &auth_token);
+
+  if (cookie_location == NGX_DECLINED) {
+    return redirect(r, &conf->redirect_location);
   }
 
   ngx_str_t user_id;
-  ngx_int_t lookup_result = lookup_user(&auth_token, &user_id);
+  ngx_int_t lookup_result = lookup_user(conf, &auth_token, &user_id);
 
   if (lookup_result == NGX_DECLINED) {
-    return redirect(r, &location);
+    return redirect(r, &conf->redirect_location);
   }
 
   append_user_id(r, &user_id);
@@ -139,9 +139,9 @@ ngx_http_auth_token_init(ngx_conf_t *cf)
  * be returned.  If it fails, the return object will be of type REDIS_REPLY_NIL.
  */
 static ngx_int_t
-lookup_user(ngx_str_t *auth_token, ngx_str_t *user_id)
+lookup_user(auth_token_main_conf_t *conf, ngx_str_t *auth_token, ngx_str_t *user_id)
 {
-  redisContext *context = redisConnect("localhost", 6379);
+  redisContext *context = redisConnect((const char*)conf->redis_host.data, conf->redis_port);
   redisReply *reply = redisCommand(context, "GET %s", auth_token->data);
 
   if (reply->type == REDIS_REPLY_NIL ) {
