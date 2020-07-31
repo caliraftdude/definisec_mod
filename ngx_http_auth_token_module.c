@@ -185,6 +185,28 @@ append_user_id(ngx_http_request_t *r, ngx_str_t *user_id)
 }
 
 /*
+ * ngx_http_auth_token_create_main_conf
+ * The only real purpose for this function is to allocate the memory for the configration items
+ * when the module loads.  This is essentially a callback routine that will ensure the 
+ * space has been allocated prior to trying to copy details to the module.  Afterwards, nginx
+ * will have the allocated structure and can populate discovered directives into it.
+ */
+static void*
+ngx_http_auth_token_create_main_conf(ngx_conf_t *cf)
+{
+  auth_token_main_conf_t *conf;
+
+  conf = ngx_pcalloc(cf->pool, sizeof(auth_token_main_conf_t));
+  if (conf == NULL) {
+    return NULL;
+  }
+
+  conf->redis_port = NGX_CONF_UNSET_UINT;
+
+  return conf;
+}
+
+/*
  * ngx_http_auth_token_module_ctx
  * This controls how the module is invoked.  The init function is called during the
  * postconfiguration phase - essentially telling nginx to call this function when
@@ -195,7 +217,7 @@ append_user_id(ngx_http_request_t *r, ngx_str_t *user_id)
 static ngx_http_module_t ngx_http_auth_token_module_ctx = {
   NULL,                                 /* preconfiguration */
   ngx_http_auth_token_init,             /* postconfiguration */
-  NULL,                                 /* create main configuration */
+  ngx_http_auth_token_create_main_conf, /* create main configuration */
   NULL,                                 /* init main configuration */
   NULL,                                 /* create server configuration */
   NULL,                                 /* merge server configuration */
@@ -213,7 +235,7 @@ static ngx_http_module_t ngx_http_auth_token_module_ctx = {
 ngx_module_t ngx_http_auth_token_module = {
   NGX_MODULE_V1,
   &ngx_http_auth_token_module_ctx, /* module context */
-  NULL,                            /* module directives */
+  ngx_http_auth_token_commands,    /* module directives */
   NGX_HTTP_MODULE,                 /* module type */
   NULL,                            /* init master */
   NULL,                            /* init module */
