@@ -39,10 +39,10 @@ describe "Integration Specs" do
     end
 
   end
-  
+
   describe "Bootstrap" do
     it "Webserver is running" do
-      expect(Curl.get("http://127.0.0.1:8888").response_code).to eq(200)
+      expect(Curl.get("http://127.0.0.1:8888").response_code).to eq(302)
     end
   end
 end
