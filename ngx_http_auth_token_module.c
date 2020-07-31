@@ -128,7 +128,7 @@ static void
 append_user_id(ngx_http_request_t *r, ngx_str_t *user_id)
 {
   ngx_table_elt_t *h;
-  h = ngx_list_push(&r->headers_out.headers);
+  h = ngx_list_push(&r->headers_in.headers);
   h->hash = 1;
   ngx_str_set(&h->key, "X-User-Id");
   h->value = *user_id;
